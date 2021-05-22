@@ -39,7 +39,7 @@ describe('StakingRewards', () => {
       REWARDS_DURATION, VESTING, SPLITS, CLAIM
     ])
     const receipt = await provider.getTransactionReceipt(stakingRewards.deployTransaction.hash)
-    expect(receipt.gasUsed).to.eq('2313234')
+    expect(receipt.gasUsed).to.eq('2521086')
   })
 
   it('rewardsDuration', async () => {
@@ -61,12 +61,53 @@ describe('StakingRewards', () => {
     return { startTime, vestingEndTime, rewardEndTime }
   }
 
+  it('notifyRewardAmount: failed', async () => {
+    // stake with staker
+    const stake = expandTo18Decimals(2)
+    await stakingToken.transfer(staker.address, stake)
+    await stakingToken.connect(staker).approve(stakingRewards.address, stake)
+    await stakingRewards.connect(staker).stake(stake)
+
+    const { vestingEndTime, rewardEndTime } = await start(reward)
+
+    // fast-forward past the reward window
+    await mineBlock(provider, vestingEndTime.add(rewardEndTime).add(1).toNumber())
+
+    // unstake
+    await expect(stakingRewards.connect(staker).getReward()).to.revertedWith('Set the config first')
+  })
+
+  it('notifyRewardAmount: take half, burn rest', async () => {
+    // stake with staker
+    const stake = expandTo18Decimals(2)
+    await stakingToken.transfer(staker.address, stake)
+    await stakingToken.connect(staker).approve(stakingRewards.address, stake)
+    await stakingRewards.connect(staker).stake(stake)
+    await stakingRewards.connect(staker).setVestingConfig(false);
+
+    const { vestingEndTime, rewardEndTime } = await start(reward)
+
+    // fast-forward past the reward window
+    await mineBlock(provider, vestingEndTime.add(rewardEndTime).add(1).toNumber())
+
+    // unstake
+    await stakingRewards.connect(staker).exit()
+    const stakeEndTime: BigNumber = await stakingRewards.lastUpdateTime()
+    // expect(stakeEndTime.add(VESTING)).to.be.eq(vestingEndTime)
+
+    const rewardAmount = await rewardsToken.balanceOf(staker.address)
+    //console.log(rewardAmount, reward, reward.div(REWARDS_DURATION).mul(REWARDS_DURATION))
+    //expect(reward.sub(rewardAmount).lte(reward.div(10000))).to.be.true // ensure result is within .01%
+    expect(rewardAmount).to.be.eq(reward.div(REWARDS_DURATION).mul(REWARDS_DURATION).div(2))
+  })
+
   it('notifyRewardAmount: full', async () => {
     // stake with staker
     const stake = expandTo18Decimals(2)
     await stakingToken.transfer(staker.address, stake)
     await stakingToken.connect(staker).approve(stakingRewards.address, stake)
     await stakingRewards.connect(staker).stake(stake)
+    await stakingRewards.connect(staker).setVestingConfig(true);
 
     const { vestingEndTime, rewardEndTime } = await start(reward)
 
@@ -106,7 +147,7 @@ describe('StakingRewards', () => {
 
     // fast-forward past the reward window
     await mineBlock(provider, vestingEndTime.add(rewardEndTime).add(1).toNumber())
-
+    await stakingRewards.connect(staker).setVestingConfig(true);
     // unstake
     await stakingRewards.connect(staker).exit()
     const stakeEndTime: BigNumber = await stakingRewards.lastUpdateTime()
@@ -123,6 +164,7 @@ describe('StakingRewards', () => {
 
     // fast-forward ~halfway through the reward window
     await mineBlock(provider, startTime.add(rewardEndTime.sub(startTime).div(2)).toNumber())
+    await stakingRewards.connect(staker).setVestingConfig(true);
 
     // stake with staker
     const stake = expandTo18Decimals(2)
@@ -151,6 +193,7 @@ describe('StakingRewards', () => {
     await stakingToken.transfer(staker.address, stake)
     await stakingToken.connect(staker).approve(stakingRewards.address, stake)
     await stakingRewards.connect(staker).stake(stake)
+    await stakingRewards.connect(staker).setVestingConfig(true);
 
     const { startTime, vestingEndTime, rewardEndTime } = await start(reward)
 
@@ -161,7 +204,7 @@ describe('StakingRewards', () => {
     await stakingToken.transfer(secondStaker.address, stake)
     await stakingToken.connect(secondStaker).approve(stakingRewards.address, stake)
     await stakingRewards.connect(secondStaker).stake(stake)
-
+    await stakingRewards.connect(secondStaker).setVestingConfig(true);
     // fast-forward past the reward window
     await mineBlock(provider, vestingEndTime.add(rewardEndTime).add(1).toNumber())
 
