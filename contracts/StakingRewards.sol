@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 
 pragma solidity >=0.6.11;
+pragma experimental ABIEncoderV2;
 
 import '@openzeppelin/contracts/math/Math.sol';
 import '@openzeppelin/contracts/math/SafeMath.sol';
@@ -102,6 +103,10 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
 
     function getRewardForDuration() external view override returns (uint256) {
         return rewardRate.mul(rewardsDuration);
+    }
+
+    function getUserVestingInfo(address account) external view returns (UserVestingInfo memory) {
+        return userVestingInfoByUser[account];
     }
 
     /* ========== MUTATIVE FUNCTIONS ========== */
