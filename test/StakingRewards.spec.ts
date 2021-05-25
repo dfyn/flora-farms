@@ -39,7 +39,7 @@ describe('StakingRewards', () => {
       REWARDS_DURATION, VESTING, SPLITS, CLAIM
     ])
     const receipt = await provider.getTransactionReceipt(stakingRewards.deployTransaction.hash)
-    expect(receipt.gasUsed).to.eq('2521086')
+    expect(receipt.gasUsed).to.eq('2498387')
   })
 
   it('rewardsDuration', async () => {
@@ -99,6 +99,56 @@ describe('StakingRewards', () => {
     //console.log(rewardAmount, reward, reward.div(REWARDS_DURATION).mul(REWARDS_DURATION))
     //expect(reward.sub(rewardAmount).lte(reward.div(10000))).to.be.true // ensure result is within .01%
     expect(rewardAmount).to.be.eq(reward.div(REWARDS_DURATION).mul(REWARDS_DURATION).div(2))
+  })
+
+  it('notifyRewardAmount: cannot change config after claim', async () => {
+    // stake with staker
+    const stake = expandTo18Decimals(2)
+    await stakingToken.transfer(staker.address, stake)
+    await stakingToken.connect(staker).approve(stakingRewards.address, stake)
+    await stakingRewards.connect(staker).stake(stake)
+    await stakingRewards.connect(staker).setVestingConfig(false);
+
+    const { vestingEndTime, rewardEndTime } = await start(reward)
+
+    // fast-forward past the reward window
+    await mineBlock(provider, vestingEndTime.add(rewardEndTime).add(1).toNumber())
+
+    // unstake
+    await stakingRewards.connect(staker).exit()
+    const rewardAmount = await rewardsToken.balanceOf(staker.address)
+
+    expect(rewardAmount).to.be.eq(reward.div(REWARDS_DURATION).mul(REWARDS_DURATION).div(2))
+
+    await expect(stakingRewards.connect(staker).setVestingConfig(true)).to.revertedWith('Cannot change config after claimed')
+
+
+  })
+
+  it('notifyRewardAmount: No reward after burn', async () => {
+    // stake with staker
+    const stake = expandTo18Decimals(2)
+    await stakingToken.transfer(staker.address, stake)
+    await stakingToken.connect(staker).approve(stakingRewards.address, stake)
+    await stakingRewards.connect(staker).stake(stake)
+    await stakingRewards.connect(staker).setVestingConfig(false);
+
+    const { vestingEndTime, rewardEndTime } = await start(reward)
+
+    // fast-forward past the reward window
+    await mineBlock(provider, vestingEndTime.add(rewardEndTime).add(1).toNumber())
+
+    // unstake
+    await stakingRewards.connect(staker).exit()
+    // expect(stakeEndTime.add(VESTING)).to.be.eq(vestingEndTime)
+
+    const rewardAmount = await rewardsToken.balanceOf(staker.address)
+    expect(rewardAmount).to.be.eq(reward.div(REWARDS_DURATION).mul(REWARDS_DURATION).div(2))
+
+    //Again Calling get Reward
+    await stakingRewards.connect(staker).getReward()
+    const newRewardAmount = await rewardsToken.balanceOf(staker.address)
+    expect(newRewardAmount).to.be.eq(rewardAmount);
   })
 
   it('notifyRewardAmount: full', async () => {
