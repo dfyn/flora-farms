@@ -1165,7 +1165,11 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
     function getReward() public override nonReentrant updateReward(_msgSender()) {
         require(block.timestamp >= periodFinish, 'Cannot claims token now');
         UserVestingInfo storage info = userVestingInfoByUser[_msgSender()];
-        require(info.hasSetConfig, 'Set the config first');
+
+        if (!info.hasSetConfig) {
+            info.hasOptForVesting = true;
+            info.hasSetConfig = true;
+        }
 
         uint256 reward;
         if (!info.hasOptForVesting) {
