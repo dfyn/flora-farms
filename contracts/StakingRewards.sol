@@ -146,9 +146,9 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
     }
 
     function setVestingConfig(bool _setConfig) external {
-        UserVestingInfo storage info = userVestingInfoByUser[msg.sender];
+        UserVestingInfo storage info = userVestingInfoByUser[_msgSender()];
         info.hasSetConfig = true;
-        require(!hasClaimed[msg.sender], 'Cannot change config after claimed');
+        require(!hasClaimed[_msgSender()], 'Cannot change config after claimed');
         info.hasOptForVesting = _setConfig;
     }
 
@@ -167,6 +167,7 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
             totalBurnableTokens = totalBurnableTokens.add(reward);
             rewardsToken.safeTransfer(_msgSender(), reward);
             rewards[_msgSender()] = 0;
+            hasClaimed[_msgSender()] = true;
             emit RewardPaid(_msgSender(), reward);
         } else {
             uint256 claimedSplitsForUser = claimedSplits[_msgSender()];
