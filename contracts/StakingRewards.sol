@@ -166,6 +166,7 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
             reward = rewards[_msgSender()].div(2);
             totalBurnableTokens = totalBurnableTokens.add(reward);
             rewardsToken.safeTransfer(_msgSender(), reward);
+            rewards[_msgSender()] = 0;
             emit RewardPaid(_msgSender(), reward);
         } else {
             uint256 claimedSplitsForUser = claimedSplits[_msgSender()];
