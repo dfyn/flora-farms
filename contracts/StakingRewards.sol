@@ -146,6 +146,7 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
     }
 
     function setVestingConfig(bool _setConfig) external {
+        require(block.timestamp <= periodFinish, 'Cannot update vesting schedule now');
         UserVestingInfo storage info = userVestingInfoByUser[_msgSender()];
         info.hasSetConfig = true;
         require(!hasClaimed[_msgSender()], 'Cannot change config after claimed');
