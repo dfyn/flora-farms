@@ -294,4 +294,17 @@ describe('StakingRewards', () => {
     expect(totalReward.mul(3).div(4).sub(rewardAmount).lte(totalReward.mul(3).div(4).div(10000)))
     expect(totalReward.div(4).sub(secondRewardAmount).lte(totalReward.div(4).div(10000)))
   })
+
+  it('Should not reset split after claim', async () => {
+    // stake with staker
+    const stake = expandTo18Decimals(2)
+    await stakingToken.transfer(staker.address, stake)
+    await stakingToken.connect(staker).approve(stakingRewards.address, stake)
+    await stakingRewards.connect(staker).stake(stake)
+
+    await stakingRewards.connect(staker).exit()
+    let stakerInfo = await stakingRewards.claimedSplits(staker.address)
+    console.log(stakerInfo)
+    expect(stakerInfo).to.be.eq(expandTo18Decimals(0))
+  })
 })
