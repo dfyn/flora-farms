@@ -158,7 +158,7 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
     // and remaining will account for burn
     // if set true, his reward will get vested for configured period.
     function getReward() public override nonReentrant updateReward(_msgSender()) {
-        require(block.timestamp >= periodFinish, 'Cannot claims token now');
+        require(block.timestamp >= periodFinish && periodFinish > 0, 'Cannot claims token now');
         UserVestingInfo storage info = userVestingInfoByUser[_msgSender()];
 
         if(!info.hasSetConfig){
@@ -203,7 +203,7 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
 
     function exit() external override {
         withdraw(_balances[_msgSender()]);
-        if (block.timestamp >= periodFinish) getReward();
+        if (block.timestamp >= periodFinish && periodFinish > 0) getReward();
     }
 
     /* ========== RESTRICTED FUNCTIONS ========== */
