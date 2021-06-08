@@ -161,7 +161,7 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
         require(block.timestamp >= periodFinish && periodFinish > 0, 'Cannot claims token now');
         UserVestingInfo storage info = userVestingInfoByUser[_msgSender()];
 
-        if(!info.hasSetConfig){
+        if (!info.hasSetConfig) {
             info.hasOptForVesting = true;
             info.hasSetConfig = true;
         }

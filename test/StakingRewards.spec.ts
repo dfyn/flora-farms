@@ -15,7 +15,7 @@ describe('StakingRewards', () => {
     ganacheOptions: {
       hardfork: 'istanbul',
       mnemonic: 'horn horn horn horn horn horn horn horn horn horn horn horn',
-      gasLimit: 9999999,
+      gasLimit: 99999999,
     },
   })
   const [wallet, staker, secondStaker] = provider.getWallets()
@@ -39,7 +39,7 @@ describe('StakingRewards', () => {
       REWARDS_DURATION, VESTING, SPLITS, CLAIM
     ])
     const receipt = await provider.getTransactionReceipt(stakingRewards.deployTransaction.hash)
-    expect(receipt.gasUsed).to.eq('2498387')
+    expect(receipt.gasUsed).to.eq('2516289')
   })
 
   it('rewardsDuration', async () => {
@@ -48,7 +48,7 @@ describe('StakingRewards', () => {
   })
 
   const reward = expandTo18Decimals(100)
-  async function start(reward: BigNumber): Promise<{ startTime: BigNumber; vestingEndTime: BigNumber; rewardEndTime: BigNumber }> {
+  async function start(reward: BigNumber): Promise<{ startTime: BigNumber; vestingEndTime: BigNumber; rewardEndTime: BigNumber; totalSplits: BigNumber }> {
     // send reward to the contract
     await rewardsToken.transfer(stakingRewards.address, reward)
     // must be called by rewardsDistribution
@@ -57,8 +57,9 @@ describe('StakingRewards', () => {
     const startTime: BigNumber = await stakingRewards.lastUpdateTime()
     const rewardEndTime: BigNumber = await stakingRewards.periodFinish() //here
     const vestingEndTime: BigNumber = await stakingRewards.vestingPeriod() //
+    const totalSplits: BigNumber = await stakingRewards.splits()
     // expect(vestingEndTime).to.be.eq(startTime.add(REWARDS_DURATION))
-    return { startTime, vestingEndTime, rewardEndTime }
+    return { startTime, vestingEndTime, rewardEndTime, totalSplits }
   }
 
   // it('notifyRewardAmount: failed', async () => {
@@ -305,6 +306,108 @@ describe('StakingRewards', () => {
     await stakingRewards.connect(staker).exit()
     let stakerInfo = await stakingRewards.claimedSplits(staker.address)
     console.log(stakerInfo)
+    expect(stakerInfo).to.be.eq(0)
+  })
+
+  it('Claimed split should be 0 in Reward cycle', async () => {
+    const { startTime, rewardEndTime } = await start(reward)
+    // stake with staker
+    const stake = expandTo18Decimals(2)
+    await stakingToken.transfer(staker.address, stake)
+    await stakingToken.connect(staker).approve(stakingRewards.address, stake)
+    await stakingRewards.connect(staker).stake(stake)
+
+    // fast-forward ~halfway through the reward window
+    await mineBlock(provider, rewardEndTime.sub(1).toNumber())
+    await stakingRewards.connect(staker).exit()
+    let stakerInfo = await stakingRewards.claimedSplits(staker.address)
+    let hasClaimed = await stakingRewards.hasClaimed(staker.address)
+    expect(hasClaimed).to.be.false;
     expect(stakerInfo).to.be.eq(expandTo18Decimals(0))
+  })
+
+  it('Claimed split:: After reward ends', async () => {
+    const { startTime, rewardEndTime } = await start(reward)
+    // stake with staker
+    const stake = expandTo18Decimals(2)
+    await stakingToken.transfer(staker.address, stake)
+    await stakingToken.connect(staker).approve(stakingRewards.address, stake)
+    await stakingRewards.connect(staker).stake(stake)
+
+    // fast-forward ~halfway through the reward window
+    await mineBlock(provider, rewardEndTime.add(1).toNumber())
+    await stakingRewards.connect(staker).exit()
+    let stakerInfo = await stakingRewards.claimedSplits(staker.address)
+    let hasClaimed = await stakingRewards.hasClaimed(staker.address)
+    expect(hasClaimed).to.be.true;
+    expect(stakerInfo).to.be.eq(0)
+  })
+  it('Claimed split:: First', async () => {
+    const { startTime, rewardEndTime, vestingEndTime } = await start(reward)
+    // stake with staker
+    const stake = expandTo18Decimals(2)
+    await stakingToken.transfer(staker.address, stake)
+    await stakingToken.connect(staker).approve(stakingRewards.address, stake)
+    await stakingRewards.connect(staker).stake(stake)
+
+    // fast-forward ~halfway through the reward window
+    await mineBlock(provider, rewardEndTime.add(vestingEndTime.mul(1).div(SPLITS)).add(1).toNumber())
+    await stakingRewards.connect(staker).exit()
+    let stakerInfo = await stakingRewards.claimedSplits(staker.address)
+    let hasClaimed = await stakingRewards.hasClaimed(staker.address)
+    expect(hasClaimed).to.be.true;
+    expect(stakerInfo).to.be.eq(1)
+  })
+
+  it('Claimed split:: Second', async () => {
+    const { startTime, rewardEndTime, vestingEndTime } = await start(reward)
+    // stake with staker
+    const stake = expandTo18Decimals(2)
+    await stakingToken.transfer(staker.address, stake)
+    await stakingToken.connect(staker).approve(stakingRewards.address, stake)
+    await stakingRewards.connect(staker).stake(stake)
+
+    // fast-forward ~halfway through the reward window
+    await mineBlock(provider, rewardEndTime.add(vestingEndTime.mul(2).div(SPLITS)).add(1).toNumber())
+    await stakingRewards.connect(staker).exit()
+    let stakerInfo = await stakingRewards.claimedSplits(staker.address)
+    let hasClaimed = await stakingRewards.hasClaimed(staker.address)
+    expect(hasClaimed).to.be.true;
+    expect(stakerInfo).to.be.eq(2)
+  })
+  it('Claimed split:: Third', async () => {
+    const { startTime, rewardEndTime, vestingEndTime } = await start(reward)
+    // stake with staker
+    const stake = expandTo18Decimals(2)
+    await stakingToken.transfer(staker.address, stake)
+    await stakingToken.connect(staker).approve(stakingRewards.address, stake)
+    await stakingRewards.connect(staker).stake(stake)
+
+    // fast-forward ~halfway through the reward window
+    await mineBlock(provider, rewardEndTime.add(vestingEndTime.mul(3).div(SPLITS)).add(1).toNumber())
+    await stakingRewards.connect(staker).exit()
+    let stakerInfo = await stakingRewards.claimedSplits(staker.address)
+    let hasClaimed = await stakingRewards.hasClaimed(staker.address)
+    expect(hasClaimed).to.be.true;
+    expect(stakerInfo).to.be.eq(3)
+  })
+
+
+  it('Claimed split:: After vesting period end', async () => {
+    const { vestingEndTime, rewardEndTime } = await start(reward)
+    // stake with staker
+    const stake = expandTo18Decimals(2)
+    await stakingToken.transfer(staker.address, stake)
+    await stakingToken.connect(staker).approve(stakingRewards.address, stake)
+    await stakingRewards.connect(staker).stake(stake)
+
+    console.log("vestingTime ", vestingEndTime.add(rewardEndTime).add(1).toNumber())
+    await mineBlock(provider, vestingEndTime.add(rewardEndTime).add(1).toNumber())
+    await stakingRewards.connect(staker).exit()
+    let stakerInfo = await stakingRewards.claimedSplits(staker.address)
+    let hasClaimed = await stakingRewards.hasClaimed(staker.address)
+    expect(hasClaimed).to.be.true;
+    expect(stakerInfo).to.be.eq(SPLITS)
+
   })
 })
