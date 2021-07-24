@@ -171,8 +171,9 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
 
         uint256 reward;
         if (!info.hasOptForVesting) {
-            reward = rewards[_msgSender()].mul(burnRate).div(100);
-            totalBurnableTokens = totalBurnableTokens.add(reward);
+            uint256 burnable = rewards[_msgSender()].mul(burnRate).div(100);
+            reward = rewards[_msgSender()].sub(burnable);
+            totalBurnableTokens = totalBurnableTokens.add(burnable);
             rewardsToken.safeTransfer(_msgSender(), reward);
             rewards[_msgSender()] = 0;
             hasClaimed[_msgSender()] = true;
