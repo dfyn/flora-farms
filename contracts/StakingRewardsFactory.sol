@@ -42,6 +42,7 @@ contract StakingRewardsFactory is Ownable {
         address stakingToken,
         uint256 rewardAmount,
         uint256 rewardsDuration,
+        uint256 burnRate,
         uint256 vesting,
         uint256 splits,
         uint256 claimable
@@ -56,6 +57,7 @@ contract StakingRewardsFactory is Ownable {
                 rewardsToken,
                 stakingToken,
                 rewardsDuration,
+                burnRate,
                 vesting,
                 splits,
                 claimable

@@ -2,7 +2,7 @@ import chai from 'chai'
 import { Contract, Wallet, BigNumber, providers } from 'ethers'
 import { solidity, deployContract } from 'ethereum-waffle'
 
-import { expandTo18Decimals, SPLITS, CLAIM, VESTING, REWARDS_DURATION } from './utils'
+import { expandTo18Decimals, SPLITS, CLAIM, VESTING, REWARDS_DURATION, BURNRATE } from './utils'
 
 import UniswapV2ERC20 from '@uniswap/v2-core/build/ERC20.json'
 import TestERC20 from '../build/TestERC20.json'
@@ -29,6 +29,7 @@ export async function stakingRewardsFixture([wallet]: Wallet[]): Promise<Staking
     rewardsToken.address,
     stakingToken.address,
     REWARDS_DURATION,
+    BURNRATE,
     VESTING,
     SPLITS,
     CLAIM

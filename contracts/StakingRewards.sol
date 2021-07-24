@@ -29,6 +29,7 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
     uint256 public periodFinish;
     uint256 public rewardRate;
     uint256 public rewardsDuration;
+    uint256 public burnRate;
     uint256 public vestingPeriod;
     uint256 public splits;
     uint256 public claim;
@@ -55,6 +56,7 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
         address _rewardsToken,
         address _stakingToken,
         uint256 _rewardsDuration,
+        uint256 _burnRate,
         uint256 _vesting,
         uint256 _splits,
         uint256 _claim
@@ -64,6 +66,7 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
         rewardsDistribution = _rewardsDistribution;
         rewardsDuration = _rewardsDuration;
         vestingPeriod = _vesting;
+        burnRate = _burnRate;
         splits = _splits;
         claim = _claim;
         splitWindow = _vesting.div(_splits);
@@ -168,7 +171,7 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
 
         uint256 reward;
         if (!info.hasOptForVesting) {
-            reward = rewards[_msgSender()].div(2);
+            reward = rewards[_msgSender()].mul(burnRate).div(100);
             totalBurnableTokens = totalBurnableTokens.add(reward);
             rewardsToken.safeTransfer(_msgSender(), reward);
             rewards[_msgSender()] = 0;

@@ -4,7 +4,7 @@ import { solidity, MockProvider, createFixtureLoader, deployContract } from 'eth
 import { ecsign } from 'ethereumjs-util'
 
 import { stakingRewardsFixture } from './fixtures'
-import { REWARDS_DURATION, VESTING, expandTo18Decimals, mineBlock, getApprovalDigest, CLAIM, SPLITS } from './utils'
+import { REWARDS_DURATION, VESTING, expandTo18Decimals, mineBlock, getApprovalDigest, CLAIM, SPLITS, BURNRATE } from './utils'
 
 import StakingRewards from '../build/StakingRewards.json'
 
@@ -36,10 +36,10 @@ describe('StakingRewards', () => {
       wallet.address,
       rewardsToken.address,
       stakingToken.address,
-      REWARDS_DURATION, VESTING, SPLITS, CLAIM
+      REWARDS_DURATION, BURNRATE, VESTING, SPLITS, CLAIM
     ])
     const receipt = await provider.getTransactionReceipt(stakingRewards.deployTransaction.hash)
-    expect(receipt.gasUsed).to.eq('2516289')
+    expect(receipt.gasUsed).to.eq('2537912')
   })
 
   it('rewardsDuration', async () => {
@@ -99,7 +99,7 @@ describe('StakingRewards', () => {
     const rewardAmount = await rewardsToken.balanceOf(staker.address)
     //console.log(rewardAmount, reward, reward.div(REWARDS_DURATION).mul(REWARDS_DURATION))
     //expect(reward.sub(rewardAmount).lte(reward.div(10000))).to.be.true // ensure result is within .01%
-    expect(rewardAmount).to.be.eq(reward.div(REWARDS_DURATION).mul(REWARDS_DURATION).div(2))
+    expect(rewardAmount).to.be.eq(reward.div(REWARDS_DURATION).mul(REWARDS_DURATION).mul(BURNRATE).div(100))
   })
 
   it('notifyRewardAmount: cannot change config after claim', async () => {
@@ -119,7 +119,7 @@ describe('StakingRewards', () => {
     await stakingRewards.connect(staker).exit()
     const rewardAmount = await rewardsToken.balanceOf(staker.address)
 
-    expect(rewardAmount).to.be.eq(reward.div(REWARDS_DURATION).mul(REWARDS_DURATION).div(2))
+    expect(rewardAmount).to.be.eq(reward.div(REWARDS_DURATION).mul(REWARDS_DURATION).mul(BURNRATE).div(100))
 
     await expect(stakingRewards.connect(staker).setVestingConfig(true)).to.revertedWith('Cannot update vesting schedule now')
 
@@ -144,7 +144,7 @@ describe('StakingRewards', () => {
     // expect(stakeEndTime.add(VESTING)).to.be.eq(vestingEndTime)
 
     const rewardAmount = await rewardsToken.balanceOf(staker.address)
-    expect(rewardAmount).to.be.eq(reward.div(REWARDS_DURATION).mul(REWARDS_DURATION).div(2))
+    expect(rewardAmount).to.be.eq(reward.div(REWARDS_DURATION).mul(REWARDS_DURATION).mul(BURNRATE).div(100))
 
     //Again Calling get Reward
     await stakingRewards.connect(staker).getReward()
