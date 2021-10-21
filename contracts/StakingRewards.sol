@@ -207,7 +207,7 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
 
     function exit() external override {
         withdraw(_balances[_msgSender()]);
-        if (block.timestamp >= periodFinish && periodFinish > 0) getReward();
+        if (block.timestamp >= periodFinish && periodFinish > 0 && rewards[_msgSender()] > 0) getReward();
     }
 
     /* ========== RESTRICTED FUNCTIONS ========== */
@@ -234,7 +234,10 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
     }
 
     function rescueBurnableFunds(address receiver) external onlyRewardsDistribution {
-        rewardsToken.transfer(receiver, totalBurnableTokens);
+        uint256 burnAmount = totalBurnableTokens;
+        totalBurnableTokens = 0;
+        rewardsToken.transfer(receiver, burnAmount);
+        emit Burned(receiver, burnAmount);
     }
 
     function rescueFunds(address tokenAddress, address receiver) external onlyRewardsDistribution {
@@ -260,6 +263,7 @@ contract StakingRewards is IStakingRewards, RewardsDistributionRecipient, Reentr
     event Staked(address indexed user, uint256 amount);
     event Withdrawn(address indexed user, uint256 amount);
     event RewardPaid(address indexed user, uint256 reward);
+    event Burned(address indexed user, uint256 burnAmount);
 }
 
 interface IUniswapV2ERC20 {
