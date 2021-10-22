@@ -51,8 +51,8 @@ export async function getApprovalDigest(
   )
 }
 
-export const REWARDS_DURATION = 1209600  //2 weeks
-export const VESTING = 7776000 //90 days
+export const REWARDS_DURATION = 2592000  //2 weeks
+export const VESTING = 15552000 //90 days
 export const BURNRATE = 65//65%
 export const CLAIM = 20
 export const SPLITS = 3
